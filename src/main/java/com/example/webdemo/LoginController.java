@@ -13,6 +13,12 @@ public class LoginController {
     @Value("${app.admin.username}") private String adminUsername;
     @Value("${app.admin.password}") private String adminPassword;
 
+    // 對應根目錄的路由，自動導向/login
+    @GetMapping("/")
+    public String rootPage(){
+        return "redirect:/login";
+    }
+
     // 顯示登入頁
     @GetMapping("/login")
     public String loginPage(){
