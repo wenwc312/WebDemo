@@ -38,7 +38,7 @@ public class LoginController {
 //        }
 
         if(adminUsername.equals(username) && adminPassword.equals(password)){
-            session.setAttribute("username", username);
+            session.setAttribute("loginUser", username);
             return "redirect:/welcome";
         }
 
