@@ -1,0 +1,38 @@
+靜態 HTML（適合純展示、無需後端邏輯）:
+1.把.html 檔案放到：src/main/resources/static/index.html
+2.Spring Boot 會自動把 static 資料夾下的檔案當作靜態資源，啟動後直接用瀏覽器打 http://localhost:8080/檔案名稱.html 就能看到，不需要寫 Controller
+
+ps.用 @RestController 直接回傳字串時，Spring 會自動幫你在 Response Header 加上： Content-Type: text/html;charset=UTF-8
+所以瀏覽器知道要用 UTF-8 解碼，中文顯示正常。
+但當你把 HTML 放到 static 資料夾，讓 Spring 用靜態資源方式回傳檔案時，它是「原封不動」把檔案內容送出去，Response Header 通常只會有：
+Content-Type: text/html
+沒有帶 charset。這時瀏覽器就得自己猜編碼，猜錯就變亂碼。
+
+解法一:
+在 HTML 的 <head> 最前面加上
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>我的頁面</title>
+</head>
+<body>
+    ...
+</body>
+</html>
+
+檔案本身儲存編碼不是 UTF-8
+如果你的 IDE（IntelliJ、Eclipse、VS Code）預設用其他編碼（例如 GBK 或系統預設）存檔，
+那即使加了 <meta charset="UTF-8">，因為檔案的實際 bytes 本來就不是 UTF-8，一樣會亂碼。
+
+檢查方式:（以 IntelliJ 為例）
+右下角狀態列會顯示目前檔案編碼，確認是 UTF-8。如果不是：
+1.點擊該編碼 → 選 "Convert to UTF-8"（或 "Reload"，兩者要分清楚：Convert 是改變存檔編碼，Reload 是用另一種編碼重新讀取）
+2.建議直接在 Settings → Editor → File Encodings 把 Project Encoding、Default encoding for properties files 都設成 UTF-8
+
+補充：一次設好，之後不用擔心
+
+在 application.properties 加上（雖然主要影響動態回應，但養成習慣一起設定比較保險）：
+server.servlet.encoding.charset=UTF-8
+server.servlet.encoding.enabled=true
+server.servlet.encoding.force=true

@@ -1,0 +1,112 @@
+登入顯示圖片或畫面
+把靜態頁面升級成「有邏輯判斷」的頁面。因為你需要「輸入帳密 → 驗證 → 跳轉」，這一定要用 Thymeleaf（不能單純用 static 資料夾），流程如下：
+1.加入 Thymeleaf 依賴:
+pom.xml：
+......
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-thymeleaf</artifactId>
+</dependency>
+......
+加完記得重新整理 Maven（IntelliJ 右上角有個 reload 圖示，或執行 mvn clean install）
+
+2.搬移檔案位置
+src/main/resources/
+├── static/
+│   └── css/
+│       └── sign-in.css        ← css 保留在這裡，不用動
+└── templates/
+    ├── login.html              ← 你的登入頁，從 static 搬過來改名
+    └── welcome.html            ← 登入成功後顯示的頁面（新建）
+
+重點：CSS/JS 這類靜態資源仍然放在 static，只有「會被 Spring 動態處理」的 HTML 頁面才放 templates。
+兩者可以並存，templates 裡的 HTML 一樣可以用 href="/css/sign-in.css" 連到 static/css/。
+
+3.修改 login.html 的 <form>:
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+...
+<form th:action="@{/login}" method="post">
+    <img class="mb-4" src="https://getbootstrap.com/docs/5.3/assets/brand/bootstrap-logo.svg" alt="" width="72" height="57" />
+    <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
+
+    <!-- 帳密錯誤時顯示 -->
+    <p th:if="${error}" class="text-danger">帳號或密碼錯誤</p>
+
+    <div class="form-floating">
+        <input type="text" class="form-control" id="username" name="username" placeholder="帳號" />
+        <label for="username">帳號</label>
+    </div>
+    <div class="form-floating">
+        <input type="password" class="form-control" id="password" name="password" placeholder="密碼" />
+        <label for="password">密碼</label>
+    </div>
+    <div class="form-check text-start my-3">
+        <input class="form-check-input" type="checkbox" value="remember-me" id="checkDefault" />
+        <label class="form-check-label" for="checkDefault">Remember me</label>
+    </div>
+    <button class="btn btn-primary w-100 py-2" type="submit">Sign in</button>
+    <p class="mt-5 mb-3 text-body-secondary">&copy; 2017–2025</p>
+</form>
+
+id 是給 HTML/CSS/JS 用來定位元素的（例如 <label for="username"> 靠 id 對應），
+但表單送出時，後端收到的欄位名稱是看 name，不是 id。這兩個容易搞混，是很多人第一次寫表單都會踩的坑。
+
+4.寫 Controller
+
+@Controller // 如果用 @RestController 會把字串 "login" 直接當作 Response Body 顯示
+public class LoginController {
+
+    // 顯示登入頁
+    @GetMapping("/login")
+    public String loginPage() {
+        return "login"; // 對應 templates/login.html
+    }
+
+    // 處理登入表單送出
+    @PostMapping("/login")
+    public String doLogin(@RequestParam String username,
+                           @RequestParam String password,
+                           HttpSession session,
+                           Model model) {
+
+        // 這裡先用寫死帳密測試，之後可接資料庫
+        if ("admin".equals(username) && "1234".equals(password)) {
+            session.setAttribute("loginUser", username); // 記住已登入
+            return "redirect:/welcome"; // 跳轉！
+        }
+
+        model.addAttribute("error", true);
+        return "login"; // 帳密錯誤，留在登入頁並顯示錯誤訊息
+    }
+
+    // 登入後的頁面
+    @GetMapping("/welcome")
+    public String welcomePage(HttpSession session, Model model) {
+        Object user = session.getAttribute("loginUser");
+        if (user == null) {
+            return "redirect:/login"; // 沒登入卻想直接訪問，導回登入頁
+        }
+        model.addAttribute("username", user);
+        return "welcome"; // 對應 templates/welcome.html
+    }
+}
+
+5.建立 welcome.html（顯示影片/圖片的頁面）
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>歡迎</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="text-center py-5">
+    <h1>歡迎回來，<span th:text="${username}"></span>！</h1>
+
+    <video width="600" controls class="mt-4">
+        <source src="/videos/demo.mp4" type="video/mp4">
+        您的瀏覽器不支援影片播放。
+    </video>
+</body>
+</html>
+
+影片檔放在 src/main/resources/static/videos/demo.mp4 即可用 /videos/demo.mp4 存取。
